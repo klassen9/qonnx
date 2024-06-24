@@ -64,6 +64,7 @@ def _find_invalid_nodes(model):
         "Reshape",
         "MaxPool",
         "Upsample",
+        "Resize",
     ]
     invalid_nodes = []
     for n in model.graph.node:
@@ -194,6 +195,18 @@ class Change3DTo4DTensors(Transformation):
                 assert list(scales.shape) == [3]
                 scales = np.append(scales, np.asarray(1.0, dtype=np.float32))
                 model.set_initializer(n.input[1], scales)
+            elif node_op_type == "Resize":
+                if n.input[2] != '':
+                    # Scales Parameter is a 1d list of upsampling factors along each axis
+                    scales = model.get_initializer(n.input[2])
+                    scales = np.append(scales, np.asarray(1.0, dtype=np.float32))
+                    model.set_initializer(n.input[2], scales)
+                if n.input[3] != '':
+                    # Size Parameter is a 1d list of the target size along each axis
+                    sizes = model.get_initializer(n.input[3])
+                    sizes = np.append(sizes, np.asarray(1.0, dtype=np.float32))
+                    model.set_initializer(n.input[3], sizes)
+                input_shape.append(1)
 
         # Change format of each input/value_info/output tensor
         for k, v in all_tensors.items():
